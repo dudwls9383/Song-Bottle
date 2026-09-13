@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ArrowUpRight, Download, Heart, Search, Clock3 } from 'lucide-react';
 import type { Bottle, Song } from '../types';
 import { Empty, SongItem } from '../components';
-import { MOODS } from '../../shared/rules';
+import { GENRES, MOODS } from '../../shared/rules';
 
 export const STATUS = {
   waiting: '표류 중',
@@ -75,6 +75,7 @@ export function Playlist({ bottles, notify }: { bottles: Bottle[]; notify: (m: s
   const [direction, setDirection] = useState('all'),
     [platform, setPlatform] = useState('all'),
     [mood, setMood] = useState('all'),
+    [genre, setGenre] = useState('all'),
     [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
@@ -94,8 +95,9 @@ export function Playlist({ bottles, notify }: { bottles: Bottle[]; notify: (m: s
       (direction === 'all' || s.direction === direction) &&
       (platform === 'all' || s.platform === platform) &&
       (mood === 'all' || s.moods.includes(mood)) &&
+      (genre === 'all' || s.genre === genre) &&
       (!onlyFavorites || favorites.includes(s.id)) &&
-      `${s.title} ${s.message}`.toLowerCase().includes(search.toLowerCase()),
+      `${s.title} ${s.artist} ${s.message}`.toLowerCase().includes(search.toLowerCase()),
   );
   function favorite(id: string) {
     const next = favorites.includes(id) ? favorites.filter((f) => f !== id) : [...favorites, id];
@@ -107,9 +109,12 @@ export function Playlist({ bottles, notify }: { bottles: Bottle[]; notify: (m: s
     }
   }
   function download() {
-    const blob = new Blob([visible.map((s) => `${s.title}\n${s.url}\n`).join('\n')], {
-      type: 'text/plain;charset=utf-8',
-    });
+    const blob = new Blob(
+      [visible.map((s) => `${s.title}${s.artist ? ` - ${s.artist}` : ''}\n${s.url}\n`).join('\n')],
+      {
+        type: 'text/plain;charset=utf-8',
+      },
+    );
     const href = URL.createObjectURL(blob),
       link = document.createElement('a');
     link.href = href;
@@ -186,6 +191,12 @@ export function Playlist({ bottles, notify }: { bottles: Bottle[]; notify: (m: s
           <option value="all">모든 무드</option>
           {MOODS.map((m) => (
             <option key={m}>{m}</option>
+          ))}
+        </select>
+        <select aria-label="장르 필터" value={genre} onChange={(e) => setGenre(e.target.value)}>
+          <option value="all">모든 장르</option>
+          {GENRES.map((g) => (
+            <option key={g}>{g}</option>
           ))}
         </select>
       </div>

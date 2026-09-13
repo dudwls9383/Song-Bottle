@@ -23,7 +23,8 @@ import {
 } from 'lucide-react';
 import { api, getSnapshot } from './api';
 import type { Bottle, Page, Snapshot } from './types';
-import { Modal, SongItem } from './components';
+import { Modal, SongItem, SongShowcase } from './components';
+import Profile, { Avatar, LevelBar } from './pages/Profile';
 import Home from './pages/Home';
 import { History, Playlist, STATUS, date } from './pages/Library';
 
@@ -48,11 +49,24 @@ export default function App() {
     [report, setReport] = useState(false),
     [reason, setReason] = useState('부적절한 메시지');
   const seen = useRef<Set<string> | null>(null);
+  const previousProgress = useRef<Snapshot['profile']>(undefined);
+  const [milestone, setMilestone] = useState('');
   const inFlight = useRef<Promise<void> | null>(null);
   const refresh = useCallback(() => {
     if (inFlight.current) return inFlight.current;
     inFlight.current = getSnapshot()
       .then((result) => {
+        const before = previousProgress.current;
+        if (before && result.profile) {
+          const unlocked = result.profile.achievements.filter(
+            (a) => a.unlocked && !before.achievements.some((b) => b.id === a.id && b.unlocked),
+          );
+          if (result.profile.level > before.level)
+            setMilestone(`레벨 업! Lv. ${result.profile.level} ${result.profile.title}`);
+          else if (unlocked.length)
+            setMilestone(`도전 달성 · ${unlocked.map((a) => a.name).join(', ')}`);
+        }
+        previousProgress.current = result.profile;
         const arrived = result.bottles.find(
           (b) => b.status === 'matched' && seen.current && !seen.current.has(b.id),
         );
@@ -95,8 +109,12 @@ export default function App() {
     const timer = setTimeout(() => setToast(''), 4500);
     return () => clearTimeout(timer);
   }, [toast]);
+  useEffect(() => {
+    if (!milestone) return;
+    const timer = setTimeout(() => setMilestone(''), 7000);
+    return () => clearTimeout(timer);
+  }, [milestone]);
   const selected = data.bottles.find((b) => b.id === selectedId);
-  const completed = data.bottles.filter((b) => b.status === 'matched').length;
   function navigate(next: Page) {
     setPage(next);
     window.scrollTo({ top: 0 });
@@ -188,15 +206,21 @@ export default function App() {
             Song Bottle 알아보기
             <ArrowRight size={15} />
           </button>
-          <div className="anonymous">
-            <span className="avatar">
-              <Music2 size={17} />
-            </span>
+          <button
+            className="anonymous"
+            onClick={() => navigate('settings')}
+            aria-label="내 프로필 설정"
+          >
+            <Avatar avatar={data.profile?.avatar} color={data.profile?.color} />
             <div>
-              익명의 리스너<small>당신의 취향은 특별해요</small>
+              익명의 리스너
+              <small>
+                Lv. {data.profile?.level || 1} · {data.profile?.title || '새싹 리스너'}
+              </small>
             </div>
-            <span className="live-dot" />
-          </div>
+            <ChevronRight size={15} />
+          </button>
+          {data.profile && <LevelBar profile={data.profile} compact />}
         </div>
       </aside>
       <div className="main-shell">
@@ -217,6 +241,15 @@ export default function App() {
               }}
             >
               <RefreshCw size={16} />
+            </button>
+            <button
+              className="topbar-profile"
+              title="내 프로필"
+              aria-label="내 프로필"
+              onClick={() => navigate('settings')}
+            >
+              <Avatar avatar={data.profile?.avatar} color={data.profile?.color} />
+              <span>Lv. {data.profile?.level || 1}</span>
             </button>
           </div>
         </header>
@@ -265,18 +298,12 @@ export default function App() {
                 <>
                   <div className="page-title">
                     <span className="eyebrow">MAKE YOURSELF AT HOME</span>
-                    <h1>설정</h1>
+                    <h1>나의 리스너</h1>
                     <p>나의 작은 음악 공간.</p>
                   </div>
-                  <section className="profile-section">
-                    <span className="large-avatar">
-                      <Music2 size={30} />
-                    </span>
-                    <div>
-                      <h2>익명의 리스너</h2>
-                      <p>{completed}번의 음악을 주고받았어요.</p>
-                    </div>
-                  </section>
+                  {data.profile && (
+                    <Profile profile={data.profile} refresh={refresh} notify={setToast} />
+                  )}
                   <div className="settings-group">
                     <h3>나의 활동</h3>
                     <button onClick={() => navigate('history')}>
@@ -312,7 +339,7 @@ export default function App() {
                       <ChevronRight size={18} />
                     </button>
                   </div>
-                  <p className="settings-footnote">Song Bottle · Version 1.0.0</p>
+                  <p className="settings-footnote">Song Bottle · Version 1.1.0</p>
                 </>
               )}
             </>
@@ -353,6 +380,13 @@ export default function App() {
           </div>
           {selected.received && !selected.reported && (
             <>
+              <SongShowcase key={selected.received.id} song={selected.received} />
+              {milestone && (
+                <div className="milestone" role="status">
+                  <CheckCheck size={18} />
+                  {milestone}
+                </div>
+              )}
               <SongItem song={selected.received} label="받은 노래" />
               <a
                 className="primary listen-button"
@@ -394,8 +428,9 @@ export default function App() {
           {selected.status === 'waiting' && (
             <>
               <p className="waiting-description">
-                같은 무드{selected.current ? `와 해류 코드 ${selected.current}` : ''}의 다른 보틀을
-                기다리고 있어요. 최대 7일 후 만료됩니다.
+                {selected.genre
+                  ? `${selected.genre}${selected.current ? ` · 해류 ${selected.current}` : ''}에서 랜덤으로 만날 보틀을 기다리고 있어요. 최대 7일 후 만료됩니다.`
+                  : '이전 버전에서 보낸 보틀이에요. 회수한 뒤 장르를 선택해서 다시 보내주세요.'}
               </p>
               <button className="secondary full-width" onClick={cancel} disabled={busy}>
                 보틀 회수하기
@@ -432,8 +467,8 @@ export default function App() {
                 {
                   [
                     '좋아하는 곡의 공유 링크를 넣어주세요. YouTube, Spotify, Apple Music, SoundCloud를 지원해요.',
-                    '무드를 1~2개 고르고 짧은 메시지를 담아보세요. 해류 코드를 맞추면 같은 공간의 사람들과 교환할 수 있어요.',
-                    '같은 무드를 가진 다른 사람의 보틀과 교환해요. 상대가 없으면 최대 7일 동안 기다려요. 브라우저를 닫아도 보틀은 남아 있어요.',
+                    '음악 장르를 고르고 무드를 최대 3개 담아보세요. 해류 코드를 맞추면 같은 공간의 사람들과 교환할 수 있어요.',
+                    '같은 장르 안에서 랜덤으로 만나요. 무드는 매칭에 영향을 주지 않아요. 상대가 없으면 최대 7일 동안 기다려요.',
                   ][step]
                 }
               </p>
@@ -467,8 +502,8 @@ export default function App() {
                 브라우저에 저장됩니다.
               </p>
               <p>
-                서버에는 곡 링크, 입력한 제목, 무드, 메시지, 해류 코드, 교환 시각과 신고 내역이
-                저장됩니다. 교환 상대에게는 곡과 메시지만 표시됩니다.
+                서버에는 곡 링크와 곡 정보, 장르, 무드, 메시지, 해류 코드, 교환 시각, 신고 내역과
+                프로필 설정이 저장됩니다. 상대에게는 곡과 메시지, 프로필 아이콘과 레벨이 표시됩니다.
               </p>
               <p>
                 이름, 연락처 등 개인 정보는 메시지에 적지 마세요. 브라우저 데이터를 지우면 기존
@@ -484,14 +519,18 @@ export default function App() {
               <h3>Song Bottle</h3>
               <p>노래 하나를 보내고, 낯선 누군가의 취향을 만나는 익명 음악 교환 서비스입니다.</p>
               <p>
-                서로 겹치는 무드가 하나 이상이고 해류 코드가 같으면 먼저 기다린 사람부터 교환합니다.
-                같은 곡끼리는 교환하지 않습니다.
+                선택한 장르와 해류 코드가 같은 사람 중 랜덤으로 교환합니다. 무드는 매칭 조건이
+                아닙니다. 같은 곡끼리는 교환하지 않습니다.
               </p>
               <p>
                 한 번에 하나의 보틀을 띄울 수 있고 같은 곡은 1시간 후 다시 보낼 수 있습니다. 신고된
                 곡은 신고한 사람의 화면에서 숨겨집니다.
               </p>
-              <p>Version 1.0.0 · 2026</p>
+              <p>
+                교환 완료마다 25 XP가 쌓이고 100 XP마다 레벨이 올라갑니다. 도전과제를 달성하면 추가
+                경험치를 받습니다.
+              </p>
+              <p>Version 1.1.0 · 2026</p>
             </div>
           )}
         </Modal>

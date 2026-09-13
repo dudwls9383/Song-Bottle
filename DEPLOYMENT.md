@@ -2,7 +2,7 @@
 
 ## 현재 시연 주소
 
-외부 접속: https://yesterday-raid-miscellaneous-assigned.trycloudflare.com
+최신 외부 접속 주소는 `.artifacts/tunnel-error.log`에서 `https://...trycloudflare.com`을 확인합니다.
 
 현재는 이 PC의 서버를 Cloudflare Quick Tunnel로 연결했습니다. PC를 종료하거나 절전 모드로 전환하면 접속할 수 없습니다. 터널을 다시 만들면 주소가 바뀔 수 있으며 상시 운영용 고정 주소가 아닙니다.
 
@@ -50,7 +50,7 @@ npm run share:stop
 
 1. 공개 주소의 `/api/health`가 정상인지 확인합니다.
 2. 서로 다른 브라우저에서 같은 주소를 엽니다.
-3. 다른 곡, 같은 무드, 같은 해류로 실제 교환합니다.
+3. 다른 곡, 같은 장르, 같은 해류로 실제 교환합니다. 무드는 달라도 교환되어야 합니다.
 4. 서버 재시작 후 교환 기록이 유지되는지 확인합니다.
 
 ## Docker

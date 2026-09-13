@@ -17,7 +17,43 @@ export const MOODS = [
   '춤추고 싶어',
   '그리움',
   '건배',
+  '새벽',
+  '드라이브',
+  '운동',
+  '여행',
+  '집중',
+  '휴식',
+  '설렘',
+  '위로',
+  '행복',
+  '몽환',
+  '추억',
+  '외로움',
+  '자신감',
+  '우주',
+  '청량',
 ];
+// 장르는 필수 매칭 조건, 무드는 곡을 설명하는 선택 태그입니다.
+export const GENRES = [
+  'K-pop',
+  'J-pop',
+  '보컬로이드',
+  '팝',
+  '힙합 / R&B',
+  '록 / 밴드',
+  '인디 / 포크',
+  '발라드',
+  'EDM',
+  '재즈 / 클래식',
+  'OST / 게임',
+  '기타',
+];
+export const AVATARS = ['headphones', 'smile', 'laugh', 'wink', 'music', 'disc'];
+export const AVATAR_COLORS = ['mint', 'rose', 'sky', 'lemon', 'lilac', 'ink'];
+export const profileSchema = z.object({
+  avatar: z.enum(AVATARS),
+  color: z.enum(AVATAR_COLORS),
+});
 export const MESSAGE_LIMIT = 20;
 export const WAIT_MS = 7 * 24 * 60 * 60 * 1000;
 export const COOLDOWN_MS = 60 * 60 * 1000;
@@ -82,12 +118,14 @@ export const bottleSchema = z.object({
         return z.NEVER;
       }
     }),
-  title: z.string().trim().max(100).default(''),
+  title: z.string().trim().max(160).default(''),
+  artist: z.string().trim().max(120).default(''),
+  genre: z.enum(GENRES, { errorMap: () => ({ message: '매칭할 음악 장르를 선택해 주세요.' }) }),
   moods: z
     .array(z.enum(MOODS))
-    .min(1, '무드 태그를 하나 이상 선택해 주세요.')
-    .max(2)
-    .refine((a) => new Set(a).size === a.length),
+    .max(3)
+    .refine((a) => new Set(a).size === a.length)
+    .default([]),
   message: z
     .string()
     .trim()

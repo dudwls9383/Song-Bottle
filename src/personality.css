@@ -1,0 +1,776 @@
+/* 수정 지점: 새 기능과 움직임을 모았습니다. 기본 배치는 styles.css에 있습니다. */
+:root {
+  --rose: #c4687a;
+  --sun: #e6be50;
+  --spring: #a9dec5;
+}
+body {
+  background: #fcfdfd;
+}
+button,
+a {
+  transition:
+    color 0.18s,
+    background 0.18s,
+    border-color 0.18s,
+    transform 0.18s,
+    box-shadow 0.18s;
+}
+button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+.primary {
+  background: var(--accent);
+  box-shadow: 0 4px 0 #195d55;
+}
+.primary:hover:not(:disabled) {
+  background: #1d6e64;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #195d55;
+}
+.primary:disabled {
+  box-shadow: none;
+}
+.brand-mark {
+  color: #b5e6cf;
+  border-color: #638476;
+}
+.brand:hover .brand-mark {
+  transform: rotate(8deg);
+}
+.nav-item.active {
+  background: #293d38;
+  color: #c5f3d9;
+}
+.nav-item.active svg {
+  color: #b4e3c9;
+}
+.nav-dot {
+  background: #e9c966;
+}
+.page-intro h1 {
+  font-size: 38px;
+  font-weight: 720;
+  line-height: 1.4;
+}
+.page-intro h1 em {
+  font-size: 30px;
+  font-weight: 550;
+  color: var(--accent);
+}
+.page-intro,
+.page-title,
+.home-grid,
+.recent-section,
+.history-entry,
+.listener-section,
+.achievement {
+  animation: arrive 0.5s ease-out both;
+}
+.recent-section {
+  animation-delay: 0.08s;
+}
+.eyebrow,
+.sidebar-label,
+.brand small,
+.section-heading > span,
+.edition,
+.ocean-caption > span,
+.page-footer > span {
+  letter-spacing: 0;
+}
+.field-label {
+  gap: 10px;
+}
+.field-label > span {
+  flex-shrink: 0;
+}
+.genre-picker,
+.avatar-editor fieldset {
+  margin: 24px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.genre-picker legend,
+.avatar-editor legend {
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 13px;
+}
+.genre-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.genre-options label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 43px;
+  padding: 10px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #fff;
+  border: 1px solid #dde6e2;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+.genre-options label:hover {
+  background: #f0f8f4;
+  transform: translateY(-2px);
+}
+.genre-options label.selected {
+  background: #e5f4ec;
+  border-color: #419780;
+  color: #246957;
+  box-shadow: inset 0 -2px 0 #419780;
+}
+.genre-options label:nth-child(3n + 2).selected {
+  background: #fcf0f1;
+  border-color: #c98596;
+  color: #964f64;
+  box-shadow: inset 0 -2px 0 #c98596;
+}
+.genre-options input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.genre-options span {
+  overflow-wrap: anywhere;
+}
+.matching-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: #608275;
+  min-height: 20px;
+}
+.mood-options button {
+  border-radius: 6px;
+  color: #69746f;
+  min-height: 35px;
+}
+.mood-options button:hover {
+  border-color: #86b39c;
+  transform: translateY(-2px);
+}
+.mood-options button.selected {
+  background: #f9f1d7;
+  border-color: #d1b968;
+  color: #776024;
+  box-shadow: inset 0 -2px 0 #d1b968;
+}
+.metadata-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 0;
+  border-block: 1px solid var(--border);
+  min-height: 90px;
+  animation: arrive 0.25s ease-out;
+}
+.metadata-preview .song-art {
+  width: 64px;
+  height: 64px;
+}
+.metadata-copy {
+  min-width: 0;
+  flex: 1;
+}
+.metadata-copy strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.metadata-copy > span {
+  display: block;
+  font-size: 11px;
+  color: #728079;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.metadata-editor {
+  display: grid;
+  gap: 10px;
+  padding: 18px 0;
+  animation: arrive 0.2s ease-out;
+}
+.metadata-editor label span {
+  color: #89958e;
+  font-size: 11px;
+  font-weight: 400;
+}
+.song-art {
+  overflow: hidden;
+  position: relative;
+}
+.song-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.song-artist {
+  font-size: 12px;
+  color: #748078;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.song-meta .genre-label {
+  color: #257963;
+  font-weight: 600;
+}
+.song-showcase {
+  padding: 4px 0 10px;
+  text-align: center;
+}
+.song-showcase > a {
+  display: block;
+  width: min(100%, 260px);
+  margin: auto;
+}
+.song-art.cover-large {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px #20362a1a;
+}
+.song-art.cover-large img {
+  object-fit: contain;
+}
+.song-showcase > a:hover {
+  transform: rotate(-2deg);
+}
+.sender-identity {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  margin-top: 20px;
+  text-align: left;
+  font-size: 12px;
+}
+.sender-identity small {
+  display: block;
+  font-size: 10px;
+  color: #7a877f;
+  margin-top: 4px;
+}
+.song-item {
+  transition: background 0.2s;
+}
+.playlist-list .song-item:hover {
+  background: #f2f8f4;
+}
+.library-filters {
+  flex-wrap: wrap;
+}
+.search-field {
+  min-width: 150px;
+}
+
+/* 수정 지점: 프로필 색상은 swatch와 아바타에서 공통으로 사용합니다. */
+.color-mint {
+  --face-bg: #b8e8d0;
+  --face-fg: #205f4d;
+}
+.color-rose {
+  --face-bg: #f3c5ce;
+  --face-fg: #913e59;
+}
+.color-sky {
+  --face-bg: #c3e4f8;
+  --face-fg: #316887;
+}
+.color-lemon {
+  --face-bg: #f8e79e;
+  --face-fg: #796124;
+}
+.color-lilac {
+  --face-bg: #ddd0f2;
+  --face-fg: #6e4d91;
+}
+.color-ink {
+  --face-bg: #e3e6e5;
+  --face-fg: #46524c;
+}
+.listener-avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--face-bg);
+  color: var(--face-fg);
+}
+.listener-avatar.large {
+  width: 88px;
+  height: 88px;
+  border: 5px solid #fff;
+  outline: 1px solid var(--face-bg);
+  transform: rotate(-7deg);
+}
+.listener-heading:hover .large {
+  animation: face-bounce 0.55s ease-in-out;
+}
+.anonymous {
+  width: 100%;
+  text-align: left;
+}
+.anonymous > svg {
+  margin-left: auto;
+}
+.topbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 10px;
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+  font-size: 11px;
+  color: #577064;
+}
+.topbar-profile:hover .listener-avatar {
+  transform: rotate(12deg);
+}
+.listener-section {
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--border);
+}
+.listener-heading {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 10px 0 28px;
+}
+.listener-heading h2 {
+  margin-top: 8px;
+  font-size: 23px;
+}
+.listener-heading p {
+  margin-top: 9px;
+  font-size: 12px;
+  color: #78877d;
+}
+.level-progress {
+  max-width: 540px;
+}
+.level-progress > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.level-progress strong {
+  font-size: 13px;
+  color: #327660;
+}
+.level-progress strong span {
+  font-weight: 450;
+  margin-left: 4px;
+}
+.level-progress small {
+  font-size: 11px;
+  color: #7f8c84;
+  white-space: nowrap;
+}
+progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 7px;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e8eeeb;
+  color: #65ae91;
+}
+progress::-webkit-progress-bar {
+  background: #e8eeeb;
+  border-radius: 4px;
+}
+progress::-webkit-progress-value {
+  background: #65ae91;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+progress::-moz-progress-bar {
+  background: #65ae91;
+}
+.level-progress.compact {
+  padding: 12px 5px 0;
+}
+.level-progress.compact strong {
+  display: none;
+}
+.level-progress.compact small {
+  font-size: 9px;
+  color: #a2b4aa;
+}
+.level-progress.compact > div {
+  margin-bottom: 7px;
+}
+.level-progress.compact progress {
+  height: 4px;
+}
+.avatar-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 38px;
+  margin-bottom: 25px;
+}
+.avatar-options,
+.color-options {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.avatar-options button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 3px;
+}
+.avatar-options button[aria-pressed='true'] {
+  border-color: #3d8b71;
+  background: #edf7f1;
+}
+.avatar-options button:hover {
+  transform: translateY(-3px) rotate(-5deg);
+}
+.color-swatch {
+  background: var(--face-bg);
+  color: var(--face-fg);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid transparent;
+}
+.color-swatch[aria-pressed='true'] {
+  outline: 2px solid var(--face-fg);
+  outline-offset: 3px;
+}
+.achievements-section {
+  padding-top: 32px;
+}
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.achievement {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #e2e9e5;
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 0;
+  background: #fff;
+}
+.achievement.unlocked {
+  background: #f0f9f3;
+  border-color: #b9d9c6;
+}
+.achievement-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #88978e;
+  background: #edf1ef;
+  flex-shrink: 0;
+}
+.unlocked .achievement-icon {
+  background: #f3e5ac;
+  color: #8d6b1a;
+}
+.achievement-copy {
+  flex: 1;
+  min-width: 0;
+}
+.achievement h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.achievement h3 svg {
+  color: #378166;
+}
+.achievement p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #7f8a83;
+  margin: 6px 0 12px;
+}
+.achievement small {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #7c8a80;
+  font-size: 10px;
+  margin-top: 8px;
+}
+.achievement small span {
+  color: #a18232;
+}
+.achievement progress {
+  height: 4px;
+}
+.milestone {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  padding: 14px;
+  background: #fbf3d8;
+  color: #8a6b20;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  animation: arrive 0.45s ease-out;
+}
+
+/* 물결과 보틀은 transform만 움직여 입력 중에도 화면 배치가 흔들리지 않습니다. */
+.ocean-section {
+  align-self: start;
+  position: sticky;
+  top: 26px;
+  background: #eef7f2;
+  padding-top: 25px;
+}
+.ocean-visual {
+  position: relative;
+  width: calc(100% + 50px);
+  margin: 0 -25px;
+  overflow: hidden;
+}
+.bottle-illustration {
+  width: 100%;
+  margin: 0;
+  max-height: 360px;
+  animation: bottle-drift 7s ease-in-out infinite;
+}
+.ocean-wave {
+  position: absolute;
+  left: -30%;
+  width: 160%;
+  height: 45px;
+  border-top: 2px solid #90c9b95c;
+  border-radius: 50%;
+  bottom: -29px;
+  pointer-events: none;
+}
+.wave-one {
+  animation: tide 5s ease-in-out infinite alternate;
+}
+.wave-two {
+  bottom: -20px;
+  border-color: #c2a66d40;
+  animation: tide 7s ease-in-out infinite alternate-reverse;
+}
+.ocean-stats {
+  margin-top: 0;
+  padding-bottom: 12px;
+}
+.ocean-stats > div:last-child strong {
+  color: #b16c7c;
+}
+.waiting-icon img {
+  width: 150px;
+  height: 130px;
+  object-fit: cover;
+  mix-blend-mode: multiply;
+}
+.result-symbol.matched {
+  animation: face-bounce 0.6s ease-out;
+}
+.modal {
+  animation: arrive 0.25s ease-out;
+}
+.modal::backdrop {
+  backdrop-filter: blur(4px);
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes bottle-drift {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(2deg);
+  }
+}
+@keyframes tide {
+  from {
+    transform: translateX(-5%) rotate(-3deg);
+  }
+  to {
+    transform: translateX(5%) rotate(3deg);
+  }
+}
+@keyframes face-bounce {
+  0%,
+  100% {
+    transform: rotate(0) scale(1);
+  }
+  35% {
+    transform: rotate(-9deg) scale(1.09);
+  }
+  70% {
+    transform: rotate(6deg) scale(0.97);
+  }
+}
+@media (max-width: 1100px) {
+  .topbar-profile > span {
+    display: none;
+  }
+  .achievement {
+    padding: 16px;
+    gap: 11px;
+  }
+}
+@media (max-width: 640px) {
+  .page-intro h1 {
+    font-size: 28px;
+  }
+  .page-intro h1 em {
+    font-size: 22px;
+  }
+  .page-intro > div {
+    max-width: calc(100% - 66px);
+  }
+  .page-intro p {
+    max-width: 220px;
+  }
+  .mobile-bottle {
+    top: 20px;
+    width: 84px;
+    height: 98px;
+    animation: bottle-drift 7s ease-in-out infinite;
+  }
+  .topbar {
+    padding: 0 16px;
+    gap: 8px;
+  }
+  .breadcrumb {
+    gap: 7px;
+  }
+  .connection {
+    font-size: 0;
+    gap: 5px;
+  }
+  .topbar-profile {
+    margin-left: 0;
+    padding-left: 9px;
+  }
+  .topbar-profile > span {
+    display: block;
+    font-size: 10px;
+  }
+  .topbar-profile .listener-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .nav-item.active {
+    background: #eff7f2;
+    color: #287660;
+  }
+  .nav-item.active svg {
+    color: #287660;
+  }
+  .genre-options {
+    gap: 7px;
+  }
+  .genre-options label {
+    font-size: 11px;
+    padding: 9px 6px;
+    gap: 5px;
+  }
+  .metadata-preview {
+    gap: 9px;
+  }
+  .metadata-preview .song-art {
+    width: 52px;
+    height: 52px;
+  }
+  .metadata-preview .icon-button {
+    width: 29px;
+    flex-shrink: 0;
+  }
+  .metadata-copy strong {
+    font-size: 12px;
+  }
+  .metadata-copy > span {
+    font-size: 10px;
+  }
+  .achievement-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .listener-heading {
+    gap: 18px;
+  }
+  .listener-heading h2 {
+    font-size: 21px;
+  }
+  .listener-avatar.large {
+    width: 76px;
+    height: 76px;
+  }
+  .level-progress strong {
+    font-size: 11px;
+  }
+  .level-progress small {
+    font-size: 10px;
+  }
+  .avatar-editor {
+    gap: 0;
+  }
+  .song-art.cover-large {
+    max-width: 220px;
+    margin: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

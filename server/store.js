@@ -1,6 +1,8 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
-import { WAIT_MS, COOLDOWN_MS, bottleSchema } from '../shared/rules.js';
+import { WAIT_MS, COOLDOWN_MS, bottleSchema, profileSchema } from '../shared/rules.js';
+import { progressFor } from './progress.js';
+import { artworkUrl } from './metadata.js';
 
 export class AppError extends Error {
   constructor(message, status = 400) {
@@ -25,6 +27,35 @@ export function createStore(path = ':memory:') {
     CREATE INDEX IF NOT EXISTS user_idx ON bottles(user_id, created_at);
     CREATE TABLE IF NOT EXISTS reports (user_id TEXT NOT NULL, bottle_id TEXT NOT NULL REFERENCES bottles(id), reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(user_id, bottle_id));`);
 
+  // 기존 SQLite 기록은 유지하고 새 버전의 열만 추가합니다. 이전 보틀의 장르는 추측하지 않습니다.
+  for (const [table, columns] of Object.entries({
+    users: { avatar: "TEXT NOT NULL DEFAULT 'headphones'", color: "TEXT NOT NULL DEFAULT 'mint'" },
+    bottles: {
+      genre: "TEXT NOT NULL DEFAULT ''",
+      artist: "TEXT NOT NULL DEFAULT ''",
+      artwork: "TEXT NOT NULL DEFAULT ''",
+      artist_kind: "TEXT NOT NULL DEFAULT 'artist'",
+    },
+  })) {
+    const existing = new Set(
+      db
+        .prepare(`PRAGMA table_info(${table})`)
+        .all()
+        .map((r) => r.name),
+    );
+    for (const [name, definition] of Object.entries(columns))
+      if (!existing.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS genre_queue_idx ON bottles(status, current, genre)');
+
+  function profile(userId) {
+    const appearance = db.prepare('SELECT avatar, color FROM users WHERE id=?').get(userId);
+    const rows = db
+      .prepare('SELECT status, genre, message FROM bottles WHERE user_id=?')
+      .all(userId);
+    return { ...appearance, ...progressFor(rows) };
+  }
+
   const expire = () =>
     db
       .prepare("UPDATE bottles SET status='expired' WHERE status='waiting' AND created_at < ?")
@@ -34,6 +65,10 @@ export function createStore(path = ':memory:') {
     url: row.url,
     platform: row.platform,
     title: row.title,
+    artist: row.artist,
+    artwork: row.artwork,
+    artistKind: row.artist_kind,
+    genre: row.genre,
     moods: JSON.parse(row.moods),
     message: row.message,
     createdAt: row.created_at,
@@ -58,13 +93,21 @@ export function createStore(path = ':memory:') {
           current: row.current,
           status: row.status,
           matchedAt: row.matched_at,
-          received: partner ? publicBottle(partner) : null,
+          received: partner
+            ? {
+                ...publicBottle(partner),
+                listener: (() => {
+                  const p = profile(partner.user_id);
+                  return { avatar: p.avatar, color: p.color, level: p.level, title: p.title };
+                })(),
+              }
+            : null,
           reported,
         };
       });
   }
 
-  function send(userId, raw) {
+  function send(userId, raw, metadata = {}) {
     const validated = bottleSchema.safeParse(raw);
     if (!validated.success) throw new AppError(validated.error.issues[0].message);
     const input = validated.data;
@@ -91,23 +134,28 @@ export function createStore(path = ':memory:') {
         now = Date.now();
       const match = db
         .prepare(
-          "SELECT * FROM bottles WHERE status='waiting' AND user_id<>? AND current=? AND url<>? ORDER BY created_at ASC",
+          "SELECT * FROM bottles WHERE status='waiting' AND user_id<>? AND current=? AND genre=? AND url<>? ORDER BY RANDOM() LIMIT 1",
         )
-        .all(userId, input.current, input.url.url)
-        .find((row) => JSON.parse(row.moods).some((m) => input.moods.includes(m)));
+        .get(userId, input.current, input.genre, input.url.url);
       db.prepare(
-        'INSERT INTO bottles (id,user_id,url,platform,title,moods,message,current,created_at,request_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        'INSERT INTO bottles (id,user_id,url,platform,title,moods,message,current,created_at,request_id,genre,artist,artwork,artist_kind) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
       ).run(
         id,
         userId,
         input.url.url,
         input.url.platform,
-        input.title || `${input.url.platform}에서 보낸 노래`,
+        input.title || metadata.title || `${input.url.platform}에서 보낸 노래`,
         JSON.stringify(input.moods),
         input.message,
         input.current,
         now,
         input.requestId,
+        input.genre,
+        input.artist || metadata.artist || '',
+        artworkUrl(metadata.artwork),
+        metadata.artistKind === 'channel' && (!input.artist || input.artist === metadata.artist)
+          ? 'channel'
+          : 'artist',
       );
       if (match) {
         const update = db.prepare(
@@ -128,10 +176,21 @@ export function createStore(path = ':memory:') {
     db,
     list,
     send,
+    profile,
+    updateProfile(userId, input) {
+      const result = profileSchema.safeParse(input);
+      if (!result.success) throw new AppError('프로필 아이콘과 색상을 선택해 주세요.');
+      db.prepare('UPDATE users SET avatar=?, color=? WHERE id=?').run(
+        result.data.avatar,
+        result.data.color,
+        userId,
+      );
+      return profile(userId);
+    },
     createSession() {
       const id = randomUUID(),
         token = randomBytes(32).toString('hex');
-      db.prepare('INSERT INTO users VALUES (?,?)').run(id, hash(token));
+      db.prepare('INSERT INTO users (id,token_hash) VALUES (?,?)').run(id, hash(token));
       return { token };
     },
     authenticate(token) {

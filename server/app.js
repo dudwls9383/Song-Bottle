@@ -1,8 +1,10 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { AppError } from './store.js';
+import { createMetadataService } from './metadata.js';
+import { bottleSchema, parseSongUrl } from '../shared/rules.js';
 
-export function createApp(store) {
+export function createApp(store, metadata = createMetadataService()) {
   const app = express();
   if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY));
   app.disable('x-powered-by');
@@ -32,7 +34,31 @@ export function createApp(store) {
     next();
   });
   app.get('/api/bottles', (req, res) =>
-    res.json({ bottles: store.list(req.userId), stats: store.stats() }),
+    res.json({
+      bottles: store.list(req.userId),
+      stats: store.stats(),
+      profile: store.profile(req.userId),
+    }),
+  );
+  app.post('/api/profile', (req, res) => res.json(store.updateProfile(req.userId, req.body)));
+  app.get(
+    '/api/metadata',
+    rateLimit({
+      windowMs: 60000,
+      limit: 30,
+      message: { error: '잠시 후 곡 정보를 다시 확인해 주세요.' },
+    }),
+    async (req, res) => {
+      if (typeof req.query.url !== 'string' || req.query.url.length > 2000)
+        throw new AppError('음악 링크를 확인해 주세요.');
+      let song;
+      try {
+        song = parseSongUrl(req.query.url);
+      } catch (error) {
+        throw new AppError(error.message);
+      }
+      res.json(await metadata.lookup(song.url));
+    },
   );
   app.post(
     '/api/bottles',
@@ -41,8 +67,11 @@ export function createApp(store) {
       limit: 15,
       message: { error: '잠시 쉬었다가 다시 보내 주세요.' },
     }),
-    (req, res) => {
-      const id = store.send(req.userId, req.body);
+    async (req, res) => {
+      const input = bottleSchema.safeParse(req.body);
+      if (!input.success) throw new AppError(input.error.issues[0].message);
+      const info = await metadata.lookup(input.data.url.url);
+      const id = store.send(req.userId, req.body, info);
       res.status(201).json({ id });
     },
   );
@@ -57,16 +86,14 @@ export function createApp(store) {
   app.use('/api', (req, res) => res.status(404).json({ error: '요청한 주소를 찾지 못했어요.' }));
   app.use((error, req, res, next) => {
     if (!(error instanceof AppError) && error.status !== 400) console.error(error);
-    res
-      .status(error.status || 500)
-      .json({
-        error:
-          error instanceof AppError
-            ? error.message
-            : error.status === 400
-              ? '입력 내용을 확인해 주세요.'
-              : '서버 연결에 문제가 있어요. 잠시 후 다시 시도해 주세요.',
-      });
+    res.status(error.status || 500).json({
+      error:
+        error instanceof AppError
+          ? error.message
+          : error.status === 400
+            ? '입력 내용을 확인해 주세요.'
+            : '서버 연결에 문제가 있어요. 잠시 후 다시 시도해 주세요.',
+    });
   });
   return app;
 }

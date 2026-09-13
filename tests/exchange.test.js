@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { createStore } from '../server/store.js';
 import { createApp } from '../server/app.js';
 import { parseSongUrl, WAIT_MS } from '../shared/rules.js';
@@ -16,6 +17,7 @@ const urls = [
 const payload = (index = 0, extra = {}) => ({
   url: urls[index],
   title: `곡 ${index}`,
+  genre: 'K-pop',
   moods: ['밤'],
   message: '오늘도 수고했어요',
   current: '',
@@ -42,25 +44,25 @@ test('두 사용자 교환은 양쪽에 한 번씩 기록되고 재시도는 중
   s.db.close();
 });
 
-test('자기 자신, 같은 곡, 다른 무드, 다른 해류는 매칭되지 않는다', () => {
+test('자기 자신, 같은 곡, 다른 장르, 다른 해류는 매칭되지 않는다', () => {
   const s = createStore(),
     a = user(s);
   s.send(a, payload());
   assert.throws(() => s.send(a, payload(1)), /이미 바다/);
   s.send(user(s), payload());
-  s.send(user(s), payload(1, { moods: ['아침'] }));
+  s.send(user(s), payload(1, { genre: 'J-pop' }));
   s.send(user(s), payload(2, { current: 'PRIVATE' }));
   assert.equal(s.stats().waiting, 4);
   assert.equal(s.stats().exchanges, 0);
   s.db.close();
 });
 
-test('해류 코드는 대소문자와 주변 공백을 정규화하고 겹치는 무드로 교환한다', () => {
+test('같은 장르와 정규화한 해류에서는 무드가 달라도 교환한다', () => {
   const s = createStore(),
     a = user(s),
     b = user(s);
   s.send(a, payload(0, { current: ' class-01 ', moods: ['밤', '작업'] }));
-  s.send(b, payload(1, { current: 'CLASS-01', moods: ['작업'] }));
+  s.send(b, payload(1, { current: 'CLASS-01', moods: ['행복'] }));
   assert.equal(s.list(a)[0].status, 'matched');
   s.db.close();
 });
@@ -88,8 +90,11 @@ test('같은 곡의 1시간 재전송 제한과 입력 검증을 서버에서 �
   s.cancel(a, id);
   assert.throws(() => s.send(a, payload()), /1시간/);
   for (const extra of [
-    { moods: [] },
-    { moods: ['밤', '비', '작업'] },
+    { genre: '' },
+    { genre: '없는 장르' },
+    { genre: undefined },
+    { moods: ['밤', '비', '작업', '산책'] },
+    { moods: ['밤', '밤'] },
     { message: '가'.repeat(21) },
     { current: '한글' },
     { url: 'javascript:alert(1)' },
@@ -145,7 +150,7 @@ test('서버 재시작 후 세션과 대기 보틀이 유지된다', () => {
 
 test('HTTP API 인증과 동시 교환 요청의 일관성', async () => {
   const store = createStore(),
-    app = createApp(store),
+    app = createApp(store, { lookup: async () => ({}) }),
     server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
   const base = `http://127.0.0.1:${server.address().port}/api`;
@@ -161,7 +166,7 @@ test('HTTP API 인증과 동시 교환 요청의 일관성', async () => {
         fetch(`${base}/bottles`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${s.token}` },
-          body: JSON.stringify(payload(i % 3)),
+          body: JSON.stringify(payload(i % 3, { url: `https://youtu.be/testVideo0${i}` })),
         }),
       ),
     );
@@ -171,5 +176,86 @@ test('HTTP API 인증과 동시 교환 요청의 일관성', async () => {
   } finally {
     await new Promise((resolve) => server.close(resolve));
     store.db.close();
+  }
+});
+
+test('무드 없이 교환할 수 있고 RANDOM 정렬 결과로 상대를 선택한다', () => {
+  const s = createStore();
+  const waiting = Array.from({ length: 4 }, () => {
+    const id = user(s);
+    return s.send(id, payload(0, { moods: [] }));
+  });
+  // SQLite 난수 함수를 결정적인 순서로 바꿔 FIFO가 아닌 무작위 정렬 경로를 검증합니다.
+  let rank = 0;
+  s.db.function('random', () => --rank);
+  const next = user(s);
+  s.send(next, payload(1, { moods: ['밤', '비', '운동'] }));
+  assert.equal(s.list(next)[0].received.id, waiting.at(-1));
+  s.db.close();
+});
+
+test('프로필 저장과 경험치는 서버에서 유지되고 재요청·회수는 경험치를 늘리지 않는다', () => {
+  const s = createStore(),
+    a = user(s),
+    b = user(s);
+  const input = payload();
+  s.updateProfile(a, { avatar: 'laugh', color: 'rose', xp: 99999 });
+  s.send(a, input);
+  assert.equal(s.profile(a).xp, 0);
+  s.send(b, payload(1));
+  assert.equal(s.profile(a).xp, 50);
+  assert.equal(s.profile(a).achievements[0].unlocked, true);
+  assert.equal(s.list(b)[0].received.listener.avatar, 'laugh');
+  assert.equal(s.list(b)[0].received.listener.color, 'rose');
+  s.send(a, input);
+  const id = s.send(a, payload(2));
+  s.cancel(a, id);
+  assert.equal(s.profile(a).xp, 50);
+  assert.throws(() => s.updateProfile(a, { avatar: 'unknown', color: 'rose' }));
+  s.db.close();
+});
+
+test('기존 DB에 열을 추가해도 세션·기록은 유지하고 장르 없는 예전 보틀은 매칭하지 않는다', () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'song-bottle-migration-'));
+  const filename = path.join(directory, 'old.db');
+  try {
+    const old = new DatabaseSync(filename);
+    old.exec(`CREATE TABLE users (id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL);
+      CREATE TABLE bottles (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), url TEXT NOT NULL,
+        platform TEXT NOT NULL, title TEXT NOT NULL, moods TEXT NOT NULL, message TEXT NOT NULL, current TEXT NOT NULL,
+        created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'waiting', partner_id TEXT REFERENCES bottles(id),
+        matched_at INTEGER, request_id TEXT NOT NULL, UNIQUE(user_id, request_id));
+      INSERT INTO users VALUES ('old-user','old-hash');`);
+    old
+      .prepare(
+        'INSERT INTO bottles (id,user_id,url,platform,title,moods,message,current,created_at,request_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      )
+      .run(
+        'old-bottle',
+        'old-user',
+        urls[0],
+        'YouTube',
+        '예전 곡',
+        '["밤"]',
+        '',
+        '',
+        Date.now(),
+        randomUUID(),
+      );
+    old.close();
+    const s = createStore(filename);
+    assert.equal(s.list('old-user')[0].title, '예전 곡');
+    assert.equal(s.list('old-user')[0].genre, '');
+    const a = user(s);
+    s.send(a, payload(1));
+    assert.equal(s.list(a)[0].status, 'waiting');
+    s.cancel('old-user', 'old-bottle');
+    s.updateProfile(a, { avatar: 'disc', color: 'sky' });
+    s.db.close();
+    const reopened = createStore(filename);
+    assert.equal(reopened.profile(a).avatar, 'disc');
+    reopened.db.close();
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
