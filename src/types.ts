@@ -1,4 +1,4 @@
-export type Page = 'home' | 'history' | 'playlist' | 'settings';
+export type Page = 'home' | 'history' | 'playlist' | 'settings' | 'ocean';
 export type Song = {
   id: string;
   url: string;
@@ -7,6 +7,7 @@ export type Song = {
   artwork: string;
   artistKind: string;
   genre: string;
+  bottleColor?: string;
   listener?: { avatar: string; color: string; level: number; title: string };
   platform: string;
   moods: string[];
@@ -29,6 +30,8 @@ export type Metadata = {
   artistKind: string;
 };
 export type Profile = {
+  titleId: string;
+  titles: { id: string; name: string; unlocked: boolean }[];
   avatar: string;
   color: string;
   xp: number;
@@ -49,6 +52,7 @@ export type Profile = {
   }[];
 };
 export type Snapshot = {
+  activity?: { id: string; genre: string; color: string; at: number }[];
   bottles: Bottle[];
   stats: { waiting: number; exchanges: number };
   profile?: Profile;

@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { GENRES, MOODS, MESSAGE_LIMIT, parseSongUrl } from '../../shared/rules';
+import { BottleVisual, BottleColors } from '../voyage';
 import { api } from '../api';
 import type { Bottle, Metadata, Snapshot } from '../types';
 import { SongArt, SongItem } from '../components';
@@ -42,6 +43,7 @@ export default function Home({ data, refresh, onSelect, notify }: Props) {
     'idle',
   );
   const [editing, setEditing] = useState(false);
+  const [bottleColor, setBottleColor] = useState('mint');
   const [retry, setRetry] = useState(0);
   const edited = useRef({ title: false, artist: false });
   const request = useRef<{ signature: string; id: string } | null>(null);
@@ -96,7 +98,7 @@ export default function Home({ data, refresh, onSelect, notify }: Props) {
       parseSongUrl(url);
       if (!genre) throw new Error('매칭할 음악 장르를 선택해 주세요.');
       setBusy(true);
-      const payload = { url, title, artist, genre, moods, message, current };
+      const payload = { url, title, artist, genre, moods, message, current, bottleColor };
       const signature = JSON.stringify(payload);
       if (request.current?.signature !== signature)
         request.current = { signature, id: crypto.randomUUID() };
@@ -155,7 +157,7 @@ export default function Home({ data, refresh, onSelect, notify }: Props) {
           {pending ? (
             <div className="waiting-state" aria-live="polite">
               <div className="waiting-icon">
-                <img src="/assets/bottle.png" alt="표류하는 음악 보틀" />
+                <BottleVisual color={pending.bottleColor} />
               </div>
               <span className="status waiting">표류 중</span>
               <h2>
@@ -321,7 +323,11 @@ export default function Home({ data, refresh, onSelect, notify }: Props) {
                 <div className="matching-note">
                   <Shuffle size={15} />
                   <span>
-                    {genre ? `${genre} 안에서 랜덤 매칭` : '함께 교환할 음악 장르를 골라주세요'}
+                    {genre === '순수 랜덤'
+                      ? '장르 상관없이 순수 랜덤을 고른 사람과 만나요'
+                      : genre
+                        ? `${genre} 안에서 랜덤 매칭`
+                        : '함께 교환할 음악 장르를 골라주세요'}
                   </span>
                 </div>
               </fieldset>
@@ -364,6 +370,7 @@ export default function Home({ data, refresh, onSelect, notify }: Props) {
                   {Array.from(message).length} / {MESSAGE_LIMIT}
                 </span>
               </div>
+              <BottleColors value={bottleColor} onChange={setBottleColor} />
               <button
                 className="current-toggle"
                 type="button"
@@ -411,11 +418,7 @@ export default function Home({ data, refresh, onSelect, notify }: Props) {
             <Waves size={20} />
           </div>
           <div className="ocean-visual">
-            <img
-              className="bottle-illustration"
-              src="/assets/bottle.png"
-              alt="음표와 편지가 담긴 유리병이 물 위에 떠 있는 모습"
-            />
+            <BottleVisual color={pending?.bottleColor || bottleColor} />
             <div className="ocean-wave wave-one" />
             <div className="ocean-wave wave-two" />
           </div>

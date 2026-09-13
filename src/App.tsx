@@ -26,10 +26,12 @@ import type { Bottle, Page, Snapshot } from './types';
 import { Modal, SongItem, SongShowcase } from './components';
 import Profile, { Avatar, LevelBar } from './pages/Profile';
 import Home from './pages/Home';
+import { Arrival, OceanFeed } from './voyage';
 import { History, Playlist, STATUS, date } from './pages/Library';
 
 const NAV = [
   { id: 'home', name: '홈', icon: Waves },
+  { id: 'ocean', name: '모두의 바다', icon: Radio },
   { id: 'history', name: '교환 기록', icon: HistoryIcon },
   { id: 'playlist', name: '플레이리스트', icon: ListMusic },
   { id: 'settings', name: '설정', icon: Settings },
@@ -272,7 +274,7 @@ export default function App() {
               <p>바다에 연결하고 있어요...</p>
             </div>
           ) : (
-            <>
+            <div className="page-enter" key={page}>
               {page === 'home' && (
                 <Home
                   data={data}
@@ -294,6 +296,7 @@ export default function App() {
                 />
               )}
               {page === 'playlist' && <Playlist bottles={data.bottles} notify={setToast} />}
+              {page === 'ocean' && <OceanFeed activity={data.activity} />}
               {page === 'settings' && (
                 <>
                   <div className="page-title">
@@ -302,7 +305,12 @@ export default function App() {
                     <p>나의 작은 음악 공간.</p>
                   </div>
                   {data.profile && (
-                    <Profile profile={data.profile} refresh={refresh} notify={setToast} />
+                    <Profile
+                      bottles={data.bottles}
+                      profile={data.profile}
+                      refresh={refresh}
+                      notify={setToast}
+                    />
                   )}
                   <div className="settings-group">
                     <h3>나의 활동</h3>
@@ -342,7 +350,7 @@ export default function App() {
                   <p className="settings-footnote">Song Bottle · Version 1.1.0</p>
                 </>
               )}
-            </>
+            </div>
           )}
         </main>
         <footer className="page-footer">
@@ -379,7 +387,7 @@ export default function App() {
             <p>{date(selected.matchedAt || selected.createdAt)}</p>
           </div>
           {selected.received && !selected.reported && (
-            <>
+            <Arrival key={selected.received.id} color={selected.received.bottleColor}>
               <SongShowcase key={selected.received.id} song={selected.received} />
               {milestone && (
                 <div className="milestone" role="status">
@@ -419,7 +427,7 @@ export default function App() {
                   </button>
                 </div>
               )}
-            </>
+            </Arrival>
           )}
           {selected.reported && <p className="muted">신고한 보틀은 숨겼어요.</p>}
           <div className="sent-result">
@@ -468,7 +476,7 @@ export default function App() {
                   [
                     '좋아하는 곡의 공유 링크를 넣어주세요. YouTube, Spotify, Apple Music, SoundCloud를 지원해요.',
                     '음악 장르를 고르고 무드를 최대 3개 담아보세요. 해류 코드를 맞추면 같은 공간의 사람들과 교환할 수 있어요.',
-                    '같은 장르 안에서 랜덤으로 만나요. 무드는 매칭에 영향을 주지 않아요. 상대가 없으면 최대 7일 동안 기다려요.',
+                    '같은 장르 안에서 랜덤으로 만나요. 순수 랜덤은 이를 선택한 사람끼리 장르 제한 없이 교환해요. 상대가 없으면 최대 7일 동안 기다려요.',
                   ][step]
                 }
               </p>
@@ -504,6 +512,8 @@ export default function App() {
               <p>
                 서버에는 곡 링크와 곡 정보, 장르, 무드, 메시지, 해류 코드, 교환 시각, 신고 내역과
                 프로필 설정이 저장됩니다. 상대에게는 곡과 메시지, 프로필 아이콘과 레벨이 표시됩니다.
+                공개 교환의 장르와 완료 시각은 모두의 바다에 표시됩니다. 개인 메시지와 해류 코드가
+                있는 교환은 공개 소식에 포함하지 않습니다.
               </p>
               <p>
                 이름, 연락처 등 개인 정보는 메시지에 적지 마세요. 브라우저 데이터를 지우면 기존

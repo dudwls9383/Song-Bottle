@@ -38,6 +38,7 @@ export function createApp(store, metadata = createMetadataService()) {
       bottles: store.list(req.userId),
       stats: store.stats(),
       profile: store.profile(req.userId),
+      activity: store.activity(),
     }),
   );
   app.post('/api/profile', (req, res) => res.json(store.updateProfile(req.userId, req.body)));

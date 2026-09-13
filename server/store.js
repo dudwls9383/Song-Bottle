@@ -29,9 +29,14 @@ export function createStore(path = ':memory:') {
 
   // 기존 SQLite 기록은 유지하고 새 버전의 열만 추가합니다. 이전 보틀의 장르는 추측하지 않습니다.
   for (const [table, columns] of Object.entries({
-    users: { avatar: "TEXT NOT NULL DEFAULT 'headphones'", color: "TEXT NOT NULL DEFAULT 'mint'" },
+    users: {
+      avatar: "TEXT NOT NULL DEFAULT 'headphones'",
+      color: "TEXT NOT NULL DEFAULT 'mint'",
+      title_id: "TEXT NOT NULL DEFAULT 'auto'",
+    },
     bottles: {
       genre: "TEXT NOT NULL DEFAULT ''",
+      bottle_color: "TEXT NOT NULL DEFAULT 'mint'",
       artist: "TEXT NOT NULL DEFAULT ''",
       artwork: "TEXT NOT NULL DEFAULT ''",
       artist_kind: "TEXT NOT NULL DEFAULT 'artist'",
@@ -49,11 +54,19 @@ export function createStore(path = ':memory:') {
   db.exec('CREATE INDEX IF NOT EXISTS genre_queue_idx ON bottles(status, current, genre)');
 
   function profile(userId) {
-    const appearance = db.prepare('SELECT avatar, color FROM users WHERE id=?').get(userId);
+    const appearance = db
+      .prepare('SELECT avatar, color, title_id AS titleId FROM users WHERE id=?')
+      .get(userId);
     const rows = db
       .prepare('SELECT status, genre, message FROM bottles WHERE user_id=?')
       .all(userId);
-    return { ...appearance, ...progressFor(rows) };
+    const progress = progressFor(rows);
+    const titles = [
+      { id: 'auto', name: progress.title, unlocked: true },
+      ...progress.achievements.map((a) => ({ id: a.id, name: a.name, unlocked: a.unlocked })),
+    ];
+    const equipped = titles.find((t) => t.id === appearance.titleId && t.unlocked) || titles[0];
+    return { ...appearance, ...progress, titles, titleId: equipped.id, title: equipped.name };
   }
 
   const expire = () =>
@@ -69,6 +82,7 @@ export function createStore(path = ':memory:') {
     artwork: row.artwork,
     artistKind: row.artist_kind,
     genre: row.genre,
+    bottleColor: row.bottle_color,
     moods: JSON.parse(row.moods),
     message: row.message,
     createdAt: row.created_at,
@@ -157,6 +171,7 @@ export function createStore(path = ':memory:') {
           ? 'channel'
           : 'artist',
       );
+      db.prepare('UPDATE bottles SET bottle_color=? WHERE id=?').run(input.bottleColor, id);
       if (match) {
         const update = db.prepare(
           "UPDATE bottles SET status='matched', partner_id=?, matched_at=? WHERE id=? AND status='waiting'",
@@ -177,14 +192,29 @@ export function createStore(path = ':memory:') {
     list,
     send,
     profile,
+    // 공개 소식은 교환당 한 건만 반환합니다. 비공개 해류, 메시지, 곡 URL, 사용자 ID는 제외합니다.
+    activity() {
+      return db
+        .prepare(
+          `SELECT b.id, b.genre, b.bottle_color AS color, b.matched_at AS at
+        FROM bottles b JOIN bottles p ON b.partner_id=p.id
+        WHERE b.status='matched' AND b.id<p.id AND b.current='' AND p.current=''
+        AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.bottle_id IN (b.id,p.id))
+        ORDER BY b.matched_at DESC LIMIT 24`,
+        )
+        .all();
+    },
     updateProfile(userId, input) {
       const result = profileSchema.safeParse(input);
       if (!result.success) throw new AppError('프로필 아이콘과 색상을 선택해 주세요.');
+      if (!profile(userId).titles.some((t) => t.id === result.data.titleId && t.unlocked))
+        throw new AppError('아직 획득하지 않은 칭호예요.');
       db.prepare('UPDATE users SET avatar=?, color=? WHERE id=?').run(
         result.data.avatar,
         result.data.color,
         userId,
       );
+      db.prepare('UPDATE users SET title_id=? WHERE id=?').run(result.data.titleId, userId);
       return profile(userId);
     },
     createSession() {

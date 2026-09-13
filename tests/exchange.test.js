@@ -28,6 +28,40 @@ function user(store) {
   return store.authenticate(store.createSession().token);
 }
 
+test('순수 랜덤은 전용 대기열에서 교환하고 보틀 색과 칭호를 보존한다', () => {
+  const s = createStore(),
+    a = user(s),
+    b = user(s),
+    c = user(s);
+  s.send(c, payload(2));
+  s.send(a, payload(0, { genre: '순수 랜덤', bottleColor: 'rose' }));
+  assert.equal(s.stats().exchanges, 0);
+  assert.throws(() => s.updateProfile(a, { avatar: 'disc', color: 'sky', titleId: 'first' }));
+  s.send(b, payload(1, { genre: '순수 랜덤' }));
+  assert.equal(s.list(b)[0].received.bottleColor, 'rose');
+  assert.equal(s.list(c)[0].status, 'waiting');
+  s.updateProfile(a, { avatar: 'disc', color: 'sky', titleId: 'first' });
+  assert.equal(s.profile(a).title, '첫 번째 파도');
+  assert.equal(s.list(b)[0].received.listener.title, '첫 번째 파도');
+  s.db.close();
+});
+
+test('공개 소식은 교환당 하나이며 메시지와 비공개 해류 및 신고된 교환을 노출하지 않는다', () => {
+  const s = createStore(),
+    a = user(s),
+    b = user(s);
+  s.send(a, payload());
+  const received = s.send(b, payload(1));
+  assert.equal(s.activity().length, 1);
+  assert.deepEqual(Object.keys(s.activity()[0]).sort(), ['at', 'color', 'genre', 'id']);
+  s.send(user(s), payload(0, { current: 'SECRET' }));
+  s.send(user(s), payload(1, { current: 'SECRET' }));
+  assert.equal(s.activity().length, 1);
+  s.report(a, received, '기타');
+  assert.equal(s.activity().length, 0);
+  s.db.close();
+});
+
 test('두 사용자 교환은 양쪽에 한 번씩 기록되고 재시도는 중복 생성하지 않는다', () => {
   const s = createStore(),
     a = user(s),

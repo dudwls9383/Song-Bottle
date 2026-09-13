@@ -47,7 +47,7 @@ try {
   await first.getByRole('heading', { name: '노래 보내기' }).waitFor();
   assert.equal(
     await first
-      .locator('.bottle-illustration')
+      .locator('.ocean-visual .voyage-bottle img')
       .evaluate((img) => img.complete && img.naturalWidth > 0),
     true,
   );
@@ -76,6 +76,7 @@ try {
   await first.getByRole('button', { name: '보틀 띄우기', exact: true }).click();
   await first.getByRole('alert').filter({ hasText: '장르' }).waitFor();
   await first.getByRole('radio', { name: 'J-pop', exact: true }).check();
+  await first.getByRole('button', { name: '로즈 보틀', exact: true }).click();
   await first.getByRole('button', { name: '밤', exact: true }).click();
   await first.getByLabel('함께 보내는 한마디').fill('오늘도 수고했어요');
   await first.getByRole('button', { name: '보틀 띄우기', exact: true }).click();
@@ -90,6 +91,10 @@ try {
   await second.getByRole('button', { name: '보틀 띄우기', exact: true }).click();
   await first.getByRole('dialog').waitFor({ timeout: 12000 });
   await second.getByRole('dialog').waitFor({ timeout: 12000 });
+  await second.locator('.arrival-scene .bottle-rose').waitFor();
+  await second.screenshot({ path: '.artifacts/mobile-arrival.png', animations: 'disabled' });
+  await first.getByRole('button', { name: '병 편지 열기', exact: true }).click();
+  await second.getByRole('button', { name: '병 편지 열기', exact: true }).click();
   await first.getByRole('dialog').getByRole('link', { name: 'Spotify에서 듣기' }).waitFor();
   await second.getByRole('dialog').getByRole('link', { name: 'YouTube에서 듣기' }).waitFor();
   assert.equal(
@@ -118,6 +123,32 @@ try {
   const download = first.waitForEvent('download');
   await first.getByRole('button', { name: '플레이리스트 다운로드' }).click();
   assert.equal((await download).suggestedFilename(), 'song-bottle-playlist.txt');
+  await first
+    .getByRole('navigation')
+    .getByRole('button', { name: '모두의 바다', exact: true })
+    .click();
+  await first.locator('.drifting-news').first().waitFor();
+  const beforeMotion = await first
+    .locator('.danmaku-track')
+    .first()
+    .evaluate((el) => getComputedStyle(el).transform);
+  await first.waitForTimeout(250);
+  assert.notEqual(
+    await first
+      .locator('.danmaku-track')
+      .first()
+      .evaluate((el) => getComputedStyle(el).transform),
+    beforeMotion,
+  );
+  await first.getByRole('button', { name: '소식 일시정지' }).click();
+  assert.equal(
+    await first
+      .locator('.danmaku-track')
+      .first()
+      .evaluate((el) => getComputedStyle(el).animationPlayState),
+    'paused',
+  );
+  await first.screenshot({ path: '.artifacts/desktop-ocean.png' });
   await second.getByRole('button', { name: '신고하기', exact: true }).click();
   await second.getByRole('button', { name: '신고하고 숨기기' }).click();
   await second.getByText('신고한 보틀은 숨겼어요.', { exact: true }).waitFor();
@@ -125,6 +156,7 @@ try {
   await second.getByRole('navigation').getByRole('button', { name: '설정', exact: true }).click();
   await second.getByRole('button', { name: '프로필 활짝', exact: true }).click();
   await second.getByRole('button', { name: '프로필 색 로즈', exact: true }).click();
+  await second.getByLabel('나의 칭호').selectOption('first');
   await second.getByRole('button', { name: '프로필 저장', exact: true }).click();
   await second.getByRole('status').filter({ hasText: '나만의 리스너' }).waitFor();
   assert.equal(
@@ -155,6 +187,8 @@ try {
   await second.getByRole('button', { name: '다음', exact: true }).click();
   await second.getByRole('button', { name: '시작하기' }).click();
   await second.screenshot({ path: '.artifacts/mobile-settings.png', fullPage: true });
+  assert.equal(await second.getByLabel('나의 칭호').inputValue(), 'first');
+  assert.equal(await second.locator('.genre-chart-row').count(), 1);
   await second.getByRole('navigation').getByRole('button', { name: '홈', exact: true }).click();
   await second.getByLabel('노래 링크').fill('https://youtu.be/5qap5aO4i9A');
   await second.getByText('자동 조회가 안 되어도 보낼 수 있어요.').waitFor();
@@ -173,7 +207,15 @@ try {
       await first.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       `${width}px 가로 넘침 없음`,
     );
+    for (const name of ['모두의 바다', '설정']) {
+      await first.getByRole('navigation').getByRole('button', { name, exact: true }).click();
+      assert.ok(
+        await first.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        `${name} ${width}px 가로 넘침 없음`,
+      );
+    }
   }
+  await first.getByRole('navigation').getByRole('button', { name: '홈', exact: true }).click();
   await first.emulateMedia({ reducedMotion: 'reduce' });
   assert.equal(
     await first.locator('.page-intro').evaluate((node) => getComputedStyle(node).animationName),

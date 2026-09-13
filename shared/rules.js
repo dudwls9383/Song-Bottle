@@ -35,6 +35,7 @@ export const MOODS = [
 ];
 // 장르는 필수 매칭 조건, 무드는 곡을 설명하는 선택 태그입니다.
 export const GENRES = [
+  '순수 랜덤',
   'K-pop',
   'J-pop',
   '보컬로이드',
@@ -53,6 +54,7 @@ export const AVATAR_COLORS = ['mint', 'rose', 'sky', 'lemon', 'lilac', 'ink'];
 export const profileSchema = z.object({
   avatar: z.enum(AVATARS),
   color: z.enum(AVATAR_COLORS),
+  titleId: z.string().max(30).default('auto'),
 });
 export const MESSAGE_LIMIT = 20;
 export const WAIT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -106,6 +108,7 @@ export function parseSongUrl(raw) {
 }
 
 export const bottleSchema = z.object({
+  bottleColor: z.enum(AVATAR_COLORS).default('mint'),
   url: z
     .string()
     .trim()

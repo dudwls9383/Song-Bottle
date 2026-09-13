@@ -13,7 +13,8 @@ import {
   Trophy,
   Waves,
 } from 'lucide-react';
-import type { Profile as ListenerProfile } from '../types';
+import type { Bottle, Profile as ListenerProfile } from '../types';
+import { TasteGraphs } from '../voyage';
 import { AVATARS, AVATAR_COLORS } from '../../shared/rules';
 import { api } from '../api';
 
@@ -81,10 +82,12 @@ export function LevelBar({
 }
 
 export default function Profile({
+  bottles,
   profile,
   refresh,
   notify,
 }: {
+  bottles: Bottle[];
   profile: ListenerProfile;
   refresh: () => Promise<void>;
   notify: (text: string) => void;
@@ -92,12 +95,14 @@ export default function Profile({
   const [avatar, setAvatar] = useState(profile.avatar);
   const [color, setColor] = useState(profile.color);
   const [busy, setBusy] = useState(false);
-  const changed = avatar !== profile.avatar || color !== profile.color;
+  const [titleId, setTitleId] = useState(profile.titleId);
+  const changed =
+    avatar !== profile.avatar || color !== profile.color || titleId !== profile.titleId;
 
   async function save() {
     setBusy(true);
     try {
-      await api('/profile', { avatar, color });
+      await api('/profile', { avatar, color, titleId });
       await refresh();
       notify('나만의 리스너가 준비됐어요.');
     } catch (e) {
@@ -158,11 +163,23 @@ export default function Profile({
             </div>
           </fieldset>
         </div>
+        <label className="title-select">
+          나의 칭호
+          <select value={titleId} onChange={(e) => setTitleId(e.target.value)}>
+            {profile.titles.map((t) => (
+              <option key={t.id} value={t.id} disabled={!t.unlocked}>
+                {t.name}
+                {t.id === 'auto' ? ' · 레벨에 따라 변경' : !t.unlocked ? ' · 미획득' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
         <button className="primary" disabled={!changed || busy} onClick={save}>
           <Save size={17} />
           {busy ? '저장 중...' : '프로필 저장'}
         </button>
       </section>
+      <TasteGraphs bottles={bottles} />
       <section className="achievements-section">
         <div className="section-heading">
           <h2>
