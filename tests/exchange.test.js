@@ -270,6 +270,32 @@ test('커뮤니티 게시글은 익명 프로필과 좋아요 상태를 반환�
   s.db.close();
 });
 
+test('모니터링 통계는 장르, 태그, 플랫폼, 상태를 집계한다', () => {
+  const s = createStore(),
+    a = user(s),
+    b = user(s),
+    c = user(s);
+  s.send(a, payload(0, { genre: 'K-pop', moods: ['밤', '비'] }));
+  s.send(b, payload(1, { genre: 'K-pop', moods: ['밤'] }));
+  s.send(c, payload(2, { genre: '팝', moods: ['운동'] }));
+  s.createCommunityPost(a, { body: '통계 테스트', mood: '밤' });
+  const stats = s.stats();
+  assert.equal(stats.totalBottles, 3);
+  assert.equal(stats.exchanges, 1);
+  assert.equal(stats.waiting, 1);
+  assert.equal(stats.activeUsers, 3);
+  assert.equal(stats.communityPosts, 1);
+  assert.equal(stats.genres.find((item) => item.name === 'K-pop').count, 2);
+  assert.equal(stats.moods.find((item) => item.name === '밤').count, 2);
+  assert.equal(stats.platforms.find((item) => item.name === 'YouTube').count, 2);
+  assert.equal(stats.statuses.find((item) => item.name === 'matched').count, 2);
+  assert.equal(
+    stats.dailyExchanges.reduce((sum, item) => sum + item.count, 0),
+    1,
+  );
+  s.db.close();
+});
+
 test('기존 DB에 열을 추가해도 세션·기록은 유지하고 장르 없는 예전 보틀은 매칭하지 않는다', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'song-bottle-migration-'));
   const filename = path.join(directory, 'old.db');

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  BarChart3,
   Check,
   CheckCheck,
   ChevronRight,
@@ -31,12 +32,15 @@ import Home from './pages/Home';
 import { Arrival, OceanFeed } from './voyage';
 import { BottleStatusCard, History, Playlist, STATUS, date } from './pages/Library';
 import Community from './pages/Community';
+import Monitoring from './pages/Monitoring';
+import HelpChat from './HelpChat';
 
 const NAV = [
   { id: 'home', name: '홈', icon: Waves },
   { id: 'ocean', name: '모두의 바다', icon: Radio },
   { id: 'history', name: '교환 기록', icon: HistoryIcon },
   { id: 'playlist', name: '플레이리스트', icon: ListMusic },
+  { id: 'monitoring', name: '모니터링', icon: BarChart3 },
   { id: 'community', name: '커뮤니티', icon: MessageSquareText },
   { id: 'settings', name: '설정', icon: Settings },
 ] as const;
@@ -404,6 +408,7 @@ export default function App() {
                 />
               )}
               {page === 'playlist' && <Playlist bottles={data.bottles} notify={setToast} />}
+              {page === 'monitoring' && <Monitoring stats={data.stats} />}
               {page === 'ocean' && (
                 <OceanFeed activity={data.activity} onOpenHistory={() => navigate('history')} />
               )}
@@ -670,6 +675,7 @@ export default function App() {
           </button>
         </div>
       )}
+      <HelpChat onNavigate={navigate} />
     </div>
   );
 }

@@ -17,6 +17,8 @@ export class AppError extends Error {
   }
 }
 const hash = (value) => createHash('sha256').update(value).digest('hex');
+const formatDay = (value) =>
+  new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric' }).format(value);
 
 export function createStore(path = ':memory:') {
   const db = new DatabaseSync(path);
@@ -327,10 +329,59 @@ export function createStore(path = ':memory:') {
     },
     stats() {
       expire();
+      const statuses = db
+        .prepare('SELECT status AS name, COUNT(*) AS count FROM bottles GROUP BY status')
+        .all();
+      const genres = db
+        .prepare(
+          "SELECT COALESCE(NULLIF(genre,''),'이전 기록') AS name, COUNT(*) AS count FROM bottles GROUP BY name ORDER BY count DESC, name LIMIT 12",
+        )
+        .all();
+      const platforms = db
+        .prepare(
+          'SELECT platform AS name, COUNT(*) AS count FROM bottles GROUP BY platform ORDER BY count DESC, name',
+        )
+        .all();
+      const moodCounts = new Map();
+      for (const row of db.prepare('SELECT moods FROM bottles').all()) {
+        for (const mood of JSON.parse(row.moods))
+          moodCounts.set(mood, (moodCounts.get(mood) || 0) + 1);
+      }
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      start.setDate(start.getDate() - 6);
+      const matchedRows = db
+        .prepare(
+          "SELECT matched_at AS matchedAt FROM bottles WHERE status='matched' AND matched_at>=?",
+        )
+        .all(+start);
+      const dailyExchanges = Array.from({ length: 7 }, (_, index) => {
+        const day = new Date(start);
+        day.setDate(day.getDate() + index);
+        const end = new Date(day);
+        end.setDate(end.getDate() + 1);
+        return {
+          label: formatDay(day),
+          count:
+            matchedRows.filter((row) => row.matchedAt >= +day && row.matchedAt < +end).length / 2,
+        };
+      });
       return {
         waiting: db.prepare("SELECT COUNT(*) AS n FROM bottles WHERE status='waiting'").get().n,
         exchanges: db.prepare("SELECT COUNT(*) / 2 AS n FROM bottles WHERE status='matched'").get()
           .n,
+        totalBottles: db.prepare('SELECT COUNT(*) AS n FROM bottles').get().n,
+        activeUsers: db.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM bottles').get().n,
+        communityPosts: db.prepare('SELECT COUNT(*) AS n FROM community_posts').get().n,
+        communityLikes: db.prepare('SELECT COUNT(*) AS n FROM community_likes').get().n,
+        genres,
+        moods: [...moodCounts]
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+          .slice(0, 12),
+        platforms,
+        statuses,
+        dailyExchanges,
       };
     },
   };
