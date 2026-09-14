@@ -57,6 +57,7 @@ export const profileSchema = z.object({
   titleId: z.string().max(30).default('auto'),
 });
 export const MESSAGE_LIMIT = 20;
+export const COMMUNITY_POST_LIMIT = 140;
 export const WAIT_MS = 7 * 24 * 60 * 60 * 1000;
 export const COOLDOWN_MS = 60 * 60 * 1000;
 
@@ -142,4 +143,16 @@ export const bottleSchema = z.object({
     .transform((v) => v.toUpperCase())
     .default(''),
   requestId: z.string().uuid(),
+});
+
+export const communityPostSchema = z.object({
+  body: z
+    .string()
+    .trim()
+    .min(1, '게시글 내용을 적어 주세요.')
+    .refine(
+      (value) => Array.from(value).length <= COMMUNITY_POST_LIMIT,
+      `게시글은 ${COMMUNITY_POST_LIMIT}자까지 쓸 수 있어요.`,
+    ),
+  mood: z.enum(MOODS).or(z.literal('')).default(''),
 });

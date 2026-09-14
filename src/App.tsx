@@ -13,10 +13,12 @@ import {
   History as HistoryIcon,
   ListMusic,
   LoaderCircle,
+  MessageSquareText,
   Music2,
   Radio,
   RefreshCw,
   Settings,
+  Share2,
   Shield,
   Waves,
   X,
@@ -27,16 +29,61 @@ import { Modal, SongItem, SongShowcase } from './components';
 import Profile, { Avatar, LevelBar } from './pages/Profile';
 import Home from './pages/Home';
 import { Arrival, OceanFeed } from './voyage';
-import { History, Playlist, STATUS, date } from './pages/Library';
+import { BottleStatusCard, History, Playlist, STATUS, date } from './pages/Library';
+import Community from './pages/Community';
 
 const NAV = [
   { id: 'home', name: '홈', icon: Waves },
   { id: 'ocean', name: '모두의 바다', icon: Radio },
   { id: 'history', name: '교환 기록', icon: HistoryIcon },
   { id: 'playlist', name: '플레이리스트', icon: ListMusic },
+  { id: 'community', name: '커뮤니티', icon: MessageSquareText },
   { id: 'settings', name: '설정', icon: Settings },
 ] as const;
 const empty: Snapshot = { bottles: [], stats: { waiting: 0, exchanges: 0 } };
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, radius);
+  ctx.arcTo(x + width, y + height, x, y + height, radius);
+  ctx.arcTo(x, y + height, x, y, radius);
+  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.closePath();
+}
+
+function drawWrapped(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  width: number,
+  lineHeight: number,
+  maxLines: number,
+  weight: string,
+) {
+  const words = [...text];
+  let line = '';
+  let lineCount = 0;
+  ctx.font = `${weight} 44px Pretendard, Segoe UI, sans-serif`;
+  for (const word of words) {
+    const test = line + word;
+    if (ctx.measureText(test).width > width && line) {
+      ctx.fillText(line, x, y + lineCount * lineHeight);
+      line = word;
+      lineCount++;
+      if (lineCount >= maxLines) return;
+    } else line = test;
+  }
+  if (line && lineCount < maxLines) ctx.fillText(line, x, y + lineCount * lineHeight);
+}
 
 export default function App() {
   const [page, setPage] = useState<Page>('home'),
@@ -149,6 +196,67 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  }
+  async function shareCard() {
+    if (!selected?.received) return;
+    const song = selected.received;
+    const canvas = document.createElement('canvas');
+    const scale = 2;
+    canvas.width = 1080 * scale;
+    canvas.height = 1350 * scale;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#f6faf8';
+    ctx.fillRect(0, 0, 1080, 1350);
+    const gradient = ctx.createLinearGradient(0, 0, 1080, 1350);
+    gradient.addColorStop(0, '#e5f5ee');
+    gradient.addColorStop(0.48, '#ffffff');
+    gradient.addColorStop(1, '#f1eef9');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1080, 1350);
+    ctx.fillStyle = '#237d72';
+    ctx.fillRect(0, 0, 1080, 12);
+    ctx.fillStyle = '#252830';
+    ctx.font = '700 48px Pretendard, Segoe UI, sans-serif';
+    ctx.fillText('Song Bottle', 76, 130);
+    ctx.fillStyle = '#777d87';
+    ctx.font = '26px Pretendard, Segoe UI, sans-serif';
+    ctx.fillText('낯선 리스너에게 도착한 오늘의 음악', 76, 178);
+    ctx.fillStyle = '#ffffff';
+    roundRect(ctx, 76, 255, 928, 660, 24);
+    ctx.fill();
+    ctx.strokeStyle = '#dde7e3';
+    ctx.stroke();
+    ctx.fillStyle = '#e8f4ef';
+    roundRect(ctx, 136, 315, 220, 220, 18);
+    ctx.fill();
+    ctx.fillStyle = '#237d72';
+    ctx.font = '700 88px Pretendard, Segoe UI, sans-serif';
+    ctx.fillText('♪', 212, 455);
+    ctx.fillStyle = '#90959e';
+    ctx.font = '24px Pretendard, Segoe UI, sans-serif';
+    ctx.fillText(song.platform, 136, 610);
+    ctx.fillStyle = '#242832';
+    drawWrapped(ctx, song.title || '도착한 노래', 136, 690, 790, 58, 3, '700');
+    ctx.fillStyle = '#626976';
+    ctx.font = '30px Pretendard, Segoe UI, sans-serif';
+    ctx.fillText(song.artist || '익명의 음악', 136, 865);
+    const tags = [song.genre, ...song.moods.map((m) => `#${m}`)].filter(Boolean);
+    ctx.fillStyle = '#237d72';
+    ctx.font = '24px Pretendard, Segoe UI, sans-serif';
+    ctx.fillText(tags.join('   '), 136, 960);
+    ctx.fillStyle = '#3c4450';
+    ctx.font = '30px Pretendard, Segoe UI, sans-serif';
+    drawWrapped(ctx, '한 곡을 보내고, 한 곡을 받았어요.', 76, 1080, 870, 44, 2, '500');
+    ctx.fillStyle = '#8a909a';
+    ctx.font = '24px Pretendard, Segoe UI, sans-serif';
+    ctx.fillText('song bottle / music connects us', 76, 1235);
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = 'song-bottle-share-card.png';
+    link.click();
+    setToast('공유 카드를 만들었어요.');
   }
 
   return (
@@ -296,7 +404,10 @@ export default function App() {
                 />
               )}
               {page === 'playlist' && <Playlist bottles={data.bottles} notify={setToast} />}
-              {page === 'ocean' && <OceanFeed activity={data.activity} />}
+              {page === 'ocean' && (
+                <OceanFeed activity={data.activity} onOpenHistory={() => navigate('history')} />
+              )}
+              {page === 'community' && <Community notify={setToast} />}
               {page === 'settings' && (
                 <>
                   <div className="page-title">
@@ -386,6 +497,7 @@ export default function App() {
             </h3>
             <p>{date(selected.matchedAt || selected.createdAt)}</p>
           </div>
+          <BottleStatusCard bottle={selected} />
           {selected.received && !selected.reported && (
             <Arrival key={selected.received.id} color={selected.received.bottleColor}>
               <SongShowcase key={selected.received.id} song={selected.received} />
@@ -405,6 +517,10 @@ export default function App() {
                 <ExternalLink size={18} />
                 {selected.received.platform}에서 듣기
               </a>
+              <button className="secondary full-width" onClick={shareCard}>
+                <Share2 size={17} />
+                공유 카드 만들기
+              </button>
               {!report ? (
                 <button className="report-button" onClick={() => setReport(true)}>
                   <Flag size={14} />

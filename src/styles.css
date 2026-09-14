@@ -777,6 +777,67 @@ textarea::placeholder {
   background: #f4eddf;
   color: #a68445;
 }
+.bottle-status-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #e4e9e6;
+  border-radius: 8px;
+  background: #fff;
+  padding: 15px;
+  margin: 6px 0 8px;
+}
+.bottle-status-card > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-card-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #eff7f4;
+  color: #237d72;
+}
+.bottle-status-card.waiting .status-card-icon {
+  background: #f7f0e3;
+  color: #a68445;
+}
+.bottle-status-card.cancelled .status-card-icon,
+.bottle-status-card.expired .status-card-icon {
+  background: #f3f1f1;
+  color: #8f929b;
+}
+.bottle-status-card strong {
+  font-size: 13px;
+  color: #47505a;
+}
+.bottle-status-card p {
+  font-size: 11px;
+  color: #89909a;
+  margin-top: 5px;
+  line-height: 1.6;
+}
+.status-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.status-steps span {
+  display: grid;
+  place-items: center;
+  min-height: 27px;
+  border-radius: 4px;
+  background: #f2f3f5;
+  color: #9a9fa8;
+  font-size: 10px;
+}
+.status-steps span.done {
+  background: #e6f4ef;
+  color: #237d72;
+  font-weight: 600;
+}
 .song-item {
   display: flex;
   gap: 14px;
@@ -913,6 +974,97 @@ select {
 }
 .playlist-list .song-item {
   border-bottom: 1px solid var(--border);
+}
+.community-composer {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+.community-composer .field-label {
+  margin: 0 0 12px;
+}
+.community-composer textarea {
+  width: 100%;
+  border: 1px solid #dfe4e8;
+  border-radius: 6px;
+  resize: vertical;
+  min-height: 94px;
+  padding: 13px 14px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.community-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 13px;
+}
+.community-actions select {
+  min-width: 150px;
+}
+.community-heading {
+  margin-bottom: 0;
+}
+.community-list {
+  display: grid;
+}
+.community-post {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--border);
+}
+.community-post.mine {
+  background: linear-gradient(90deg, #f6fbf8, transparent);
+}
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.post-author strong {
+  display: block;
+  font-size: 13px;
+  color: #464c56;
+}
+.post-author span,
+.post-author time {
+  font-size: 10px;
+  color: #9298a2;
+}
+.post-author time {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.community-post > p {
+  font-size: 14px;
+  line-height: 1.85;
+  color: #444b55;
+  margin: 14px 0;
+  overflow-wrap: anywhere;
+}
+.post-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #7d968e;
+  font-size: 11px;
+}
+.post-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: #8a8f99;
+}
+.post-like:hover,
+.post-like.active {
+  background: #f6edf2;
+  color: #b8738f;
 }
 .favorite {
   color: #b8738f;
@@ -1104,6 +1256,10 @@ select {
   margin-top: 15px;
 }
 .secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid #d9dce5;
   border-radius: 6px;
   min-height: 41px;
@@ -1397,7 +1553,7 @@ select {
   }
   .sidebar nav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 0;
     width: 100%;
     height: 67px;
@@ -1409,7 +1565,7 @@ select {
     gap: 6px;
     padding: 11px 2px;
     color: #989aa6;
-    font-size: 10px;
+    font-size: 9px;
     justify-content: center;
     border-radius: 0;
   }
@@ -1426,7 +1582,7 @@ select {
   }
   .nav-dot {
     position: absolute;
-    right: 24%;
+    right: 18%;
     top: 10px;
   }
   .main-shell {
@@ -1543,6 +1699,21 @@ select {
     flex: 1;
     font-size: 11px;
   }
+  .community-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .community-actions select,
+  .community-actions .primary {
+    width: 100%;
+  }
+  .post-author {
+    align-items: flex-start;
+  }
+  .post-author time {
+    white-space: normal;
+    text-align: right;
+  }
   .modal {
     padding: 21px;
   }
@@ -1653,7 +1824,7 @@ label {
     font-size: 7px;
   }
   .nav-item {
-    font-size: 10px;
+    font-size: 9px;
   }
   .supported {
     font-size: 9px;

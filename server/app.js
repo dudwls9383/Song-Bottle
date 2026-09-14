@@ -84,6 +84,24 @@ export function createApp(store, metadata = createMetadataService()) {
     store.report(req.userId, req.body.bottleId, req.body.reason);
     res.json({ ok: true });
   });
+  app.get('/api/community/posts', (req, res) =>
+    res.json({ posts: store.communityPosts(req.userId) }),
+  );
+  app.post(
+    '/api/community/posts',
+    rateLimit({
+      windowMs: 60000,
+      limit: 8,
+      message: { error: '게시글은 잠시 후 다시 올려 주세요.' },
+    }),
+    (req, res) => {
+      const id = store.createCommunityPost(req.userId, req.body);
+      res.status(201).json({ id });
+    },
+  );
+  app.post('/api/community/posts/:id/like', (req, res) =>
+    res.json(store.toggleCommunityLike(req.userId, req.params.id)),
+  );
   app.use('/api', (req, res) => res.status(404).json({ error: '요청한 주소를 찾지 못했어요.' }));
   app.use((error, req, res, next) => {
     if (!(error instanceof AppError) && error.status !== 400) console.error(error);

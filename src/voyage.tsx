@@ -69,7 +69,13 @@ export function Arrival({ color, children }: { color?: string; children: ReactNo
   );
 }
 
-export function OceanFeed({ activity = [] }: { activity: Snapshot['activity'] }) {
+export function OceanFeed({
+  activity = [],
+  onOpenHistory,
+}: {
+  activity: Snapshot['activity'];
+  onOpenHistory: () => void;
+}) {
   const [paused, setPaused] = useState(false);
   // 한 레인에 한 소식만 흘려 긴 문장도 서로 겹치지 않습니다. 최근 소식을 반복 재생합니다.
   const lanes = Array.from({ length: 5 }, (_, lane) =>
@@ -96,7 +102,7 @@ export function OceanFeed({ activity = [] }: { activity: Snapshot['activity'] })
           {paused ? <Play size={18} /> : <Pause size={18} />}
         </button>
       </div>
-      <div className={`danmaku-stage ${paused ? 'paused' : ''}`} aria-hidden="true">
+      <div className={`danmaku-stage ${paused ? 'paused' : ''}`}>
         <div className="feed-backdrop">
           <BottleVisual color="sky" />
         </div>
@@ -114,10 +120,15 @@ export function OceanFeed({ activity = [] }: { activity: Snapshot['activity'] })
                   }
                 >
                   {items.map((item) => (
-                    <span className={`drifting-news color-${item.color}`} key={item.id}>
+                    <button
+                      className={`drifting-news color-${item.color}`}
+                      key={item.id}
+                      onClick={onOpenHistory}
+                      title="내 교환 기록 보기"
+                    >
                       <Music2 size={17} />
                       <strong>{item.genre || '음악'}</strong>두 리스너의 취향이 만났어요
-                    </span>
+                    </button>
                   ))}
                 </div>
               )}
@@ -134,10 +145,10 @@ export function OceanFeed({ activity = [] }: { activity: Snapshot['activity'] })
       <details className="activity-list">
         <summary>소식 목록</summary>
         {activity.map((item) => (
-          <p key={item.id}>
+          <button key={item.id} onClick={onOpenHistory}>
             <span>{item.genre || '음악'} · 교환 완료</span>
             <time>{new Date(item.at).toLocaleString('ko-KR')}</time>
-          </p>
+          </button>
         ))}
       </details>
     </section>

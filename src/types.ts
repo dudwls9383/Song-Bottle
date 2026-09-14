@@ -1,4 +1,4 @@
-export type Page = 'home' | 'history' | 'playlist' | 'settings' | 'ocean';
+export type Page = 'home' | 'history' | 'playlist' | 'community' | 'settings' | 'ocean';
 export type Song = {
   id: string;
   url: string;
@@ -56,4 +56,14 @@ export type Snapshot = {
   bottles: Bottle[];
   stats: { waiting: number; exchanges: number };
   profile?: Profile;
+};
+export type CommunityPost = {
+  id: string;
+  body: string;
+  mood: string;
+  createdAt: number;
+  likes: number;
+  liked: boolean;
+  mine: boolean;
+  listener: { avatar: string; color: string; level: number; title: string };
 };

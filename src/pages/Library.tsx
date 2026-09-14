@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { ArrowUpRight, Download, Heart, Search, Clock3 } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  Download,
+  Heart,
+  Search,
+  Clock3,
+  Waves,
+  XCircle,
+} from 'lucide-react';
 import type { Bottle, Song } from '../types';
 import { Empty, SongItem } from '../components';
 import { GENRES, MOODS } from '../../shared/rules';
@@ -17,6 +26,52 @@ export const date = (n: number) =>
     hour: '2-digit',
     minute: '2-digit',
   }).format(n);
+
+const WAIT_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function BottleStatusCard({ bottle }: { bottle: Bottle }) {
+  const age = Date.now() - bottle.createdAt;
+  const remainingDays = Math.max(0, Math.ceil((WAIT_MS - age) / (24 * 60 * 60 * 1000)));
+  const steps = [
+    { id: 'sent', label: '발송', done: true },
+    { id: 'drifting', label: '표류', done: bottle.status !== 'cancelled' },
+    { id: 'matched', label: '도착', done: bottle.status === 'matched' },
+  ];
+  const icon =
+    bottle.status === 'matched' ? (
+      <CheckCircle2 size={20} />
+    ) : bottle.status === 'waiting' ? (
+      <Waves size={20} />
+    ) : (
+      <XCircle size={20} />
+    );
+  return (
+    <div className={`bottle-status-card ${bottle.status}`}>
+      <div>
+        <span className="status-card-icon">{icon}</span>
+        <div>
+          <strong>{STATUS[bottle.status]}</strong>
+          <p>
+            {bottle.status === 'matched'
+              ? `${date(bottle.matchedAt || bottle.createdAt)}에 교환됐어요.`
+              : bottle.status === 'waiting'
+                ? remainingDays
+                  ? `약 ${remainingDays}일 동안 더 기다릴 수 있어요.`
+                  : '곧 만료될 수 있어요.'
+                : '이 보틀은 더 이상 매칭되지 않아요.'}
+          </p>
+        </div>
+      </div>
+      <div className="status-steps" aria-label="보틀 진행 상태">
+        {steps.map((step) => (
+          <span className={step.done ? 'done' : ''} key={step.id}>
+            {step.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function History({
   bottles,
@@ -59,6 +114,7 @@ export function History({
                 <span className={`status ${b.status}`}>{STATUS[b.status]}</span>
                 <ArrowUpRight size={18} />
               </button>
+              <BottleStatusCard bottle={b} />
               {b.received && !b.reported && <SongItem song={b.received} label="받은 노래" />}
               {b.reported && <p className="muted">신고한 보틀은 숨겼어요.</p>}
               <SongItem song={b} label="보낸 노래" />

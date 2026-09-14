@@ -1,6 +1,12 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
-import { WAIT_MS, COOLDOWN_MS, bottleSchema, profileSchema } from '../shared/rules.js';
+import {
+  WAIT_MS,
+  COOLDOWN_MS,
+  bottleSchema,
+  communityPostSchema,
+  profileSchema,
+} from '../shared/rules.js';
 import { progressFor } from './progress.js';
 import { artworkUrl } from './metadata.js';
 
@@ -25,7 +31,15 @@ export function createStore(path = ':memory:') {
     );
     CREATE INDEX IF NOT EXISTS queue_idx ON bottles(status, current, created_at);
     CREATE INDEX IF NOT EXISTS user_idx ON bottles(user_id, created_at);
-    CREATE TABLE IF NOT EXISTS reports (user_id TEXT NOT NULL, bottle_id TEXT NOT NULL REFERENCES bottles(id), reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(user_id, bottle_id));`);
+    CREATE TABLE IF NOT EXISTS reports (user_id TEXT NOT NULL, bottle_id TEXT NOT NULL REFERENCES bottles(id), reason TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(user_id, bottle_id));
+    CREATE TABLE IF NOT EXISTS community_posts (
+      id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), body TEXT NOT NULL,
+      mood TEXT NOT NULL, created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS community_likes (
+      user_id TEXT NOT NULL REFERENCES users(id), post_id TEXT NOT NULL REFERENCES community_posts(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL, PRIMARY KEY(user_id, post_id)
+    );`);
 
   // 기존 SQLite 기록은 유지하고 새 버전의 열만 추가합니다. 이전 보틀의 장르는 추측하지 않습니다.
   for (const [table, columns] of Object.entries({
@@ -52,6 +66,7 @@ export function createStore(path = ':memory:') {
       if (!existing.has(name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`);
   }
   db.exec('CREATE INDEX IF NOT EXISTS genre_queue_idx ON bottles(status, current, genre)');
+  db.exec('CREATE INDEX IF NOT EXISTS community_posts_idx ON community_posts(created_at DESC)');
 
   function profile(userId) {
     const appearance = db
@@ -249,6 +264,66 @@ export function createStore(path = ':memory:') {
         reason,
         Date.now(),
       );
+    },
+    communityPosts(userId) {
+      return db
+        .prepare(
+          `SELECT p.id, p.body, p.mood, p.created_at AS createdAt, p.user_id AS userId,
+            u.avatar, u.color,
+            COUNT(l.user_id) AS likes,
+            MAX(CASE WHEN l.user_id=? THEN 1 ELSE 0 END) AS liked
+          FROM community_posts p
+          JOIN users u ON u.id=p.user_id
+          LEFT JOIN community_likes l ON l.post_id=p.id
+          GROUP BY p.id
+          ORDER BY p.created_at DESC
+          LIMIT 80`,
+        )
+        .all(userId)
+        .map((row) => {
+          const p = profile(row.userId);
+          return {
+            id: row.id,
+            body: row.body,
+            mood: row.mood,
+            createdAt: row.createdAt,
+            likes: row.likes,
+            liked: !!row.liked,
+            mine: row.userId === userId,
+            listener: { avatar: row.avatar, color: row.color, level: p.level, title: p.title },
+          };
+        });
+    },
+    createCommunityPost(userId, raw) {
+      const result = communityPostSchema.safeParse(raw);
+      if (!result.success) throw new AppError(result.error.issues[0].message);
+      const recent = db
+        .prepare(
+          'SELECT created_at FROM community_posts WHERE user_id=? ORDER BY created_at DESC LIMIT 1',
+        )
+        .get(userId);
+      if (recent && recent.created_at > Date.now() - 10000)
+        throw new AppError('게시글은 잠시 후 다시 올릴 수 있어요.', 429);
+      const id = randomUUID();
+      db.prepare('INSERT INTO community_posts VALUES (?,?,?,?,?)').run(
+        id,
+        userId,
+        result.data.body,
+        result.data.mood,
+        Date.now(),
+      );
+      return id;
+    },
+    toggleCommunityLike(userId, postId) {
+      if (!db.prepare('SELECT 1 FROM community_posts WHERE id=?').get(postId))
+        throw new AppError('게시글을 찾지 못했어요.', 404);
+      const existing = db
+        .prepare('SELECT 1 FROM community_likes WHERE user_id=? AND post_id=?')
+        .get(userId, postId);
+      if (existing)
+        db.prepare('DELETE FROM community_likes WHERE user_id=? AND post_id=?').run(userId, postId);
+      else db.prepare('INSERT INTO community_likes VALUES (?,?,?)').run(userId, postId, Date.now());
+      return { liked: !existing };
     },
     stats() {
       expire();

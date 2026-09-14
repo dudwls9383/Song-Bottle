@@ -249,6 +249,27 @@ test('프로필 저장과 경험치는 서버에서 유지되고 재요청·회�
   s.db.close();
 });
 
+test('커뮤니티 게시글은 익명 프로필과 좋아요 상태를 반환한다', () => {
+  const s = createStore(),
+    a = user(s),
+    b = user(s);
+  s.updateProfile(a, { avatar: 'disc', color: 'sky' });
+  const postId = s.createCommunityPost(a, {
+    body: '오늘은 드라이브 노래 추천받고 싶어요.',
+    mood: '드라이브',
+  });
+  assert.throws(() => s.createCommunityPost(a, { body: 'x'.repeat(141), mood: '' }));
+  assert.equal(s.communityPosts(b)[0].body, '오늘은 드라이브 노래 추천받고 싶어요.');
+  assert.equal(s.communityPosts(b)[0].listener.avatar, 'disc');
+  assert.equal(s.communityPosts(b)[0].mine, false);
+  assert.equal(s.toggleCommunityLike(b, postId).liked, true);
+  assert.equal(s.communityPosts(b)[0].liked, true);
+  assert.equal(s.communityPosts(a)[0].likes, 1);
+  assert.equal(s.toggleCommunityLike(b, postId).liked, false);
+  assert.equal(s.communityPosts(a)[0].likes, 0);
+  s.db.close();
+});
+
 test('기존 DB에 열을 추가해도 세션·기록은 유지하고 장르 없는 예전 보틀은 매칭하지 않는다', () => {
   const directory = mkdtempSync(path.join(tmpdir(), 'song-bottle-migration-'));
   const filename = path.join(directory, 'old.db');
